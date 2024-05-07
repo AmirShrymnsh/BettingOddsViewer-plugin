@@ -1,5 +1,5 @@
-const vscode = require('vscode');
 const axios = require('axios'); // Using axios for HTTP requests
+const vscode = require('vscode');
 
 function activate(context) {
     let panel = vscode.window.createWebviewPanel(
@@ -11,9 +11,17 @@ function activate(context) {
 
     async function updateOdds() {
         try {
-            const response = await axios.get('https://api.bettingodds.com/sports');
-            panel.webview.html = createHtml(response.data);
+            const response = await axios.get('https://api.the-odds-api.com/v3/odds', {
+                params: {
+                    api_key: '15e651e1e408f81a64dafe3bd20abccd', 
+                    sport: 'soccer_epl', // Example: English Premier League
+                    region: 'uk', // Example: Targets UK bookmakers
+                    mkt: 'h2h' // Market type, h2h = head to head
+                }
+            });
+            panel.webview.html = createHtml(response.data.data); // Adjust according to the actual data structure
         } catch (error) {
+            console.error('Failed to fetch odds:', error);
             panel.webview.html = `Error fetching data: ${error}`;
         }
     }
@@ -26,11 +34,12 @@ function activate(context) {
 }
 
 function createHtml(data) {
-    // Simple HTML creation to show betting odds
-    let html = `<h1>Betting Odds</h1>`;
+    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; script-src 'nonce-XYZ';">`;
+    let html = `<html><head>${csp}</head><body><h1>Betting Odds</h1>`;
     data.forEach(event => {
-        html += `<p>${event.match}: ${event.odds}</p>`;
+        html += `<p>${event.sport}: ${event.teams.join(' vs ')} - Odds: ${event.sites[0].odds.h2h.join(' | ')}</p>`; // Adjust based on actual API response structure
     });
+    html += `</body></html>`;
     return html;
 }
 
